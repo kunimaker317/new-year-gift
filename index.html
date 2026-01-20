@@ -3,191 +3,498 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>New Year Gift</title>
+    <title>Premium Stars Giveaway</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --primary: #e0a509;
+            --accent: #ff0055;
+            --bg-grad-start: #1c1038;
+            --bg-grad-end: #0a0514;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background: radial-gradient(circle at center, #1a2a6c, #b21f1f, #fdbb2d); /* Фоновый градиент как в видео (примерно) */
-            background: linear-gradient(180deg, #181930 0%, #0d0d15 100%);
+            background: linear-gradient(135deg, var(--bg-grad-start), var(--bg-grad-end));
             color: white;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             height: 100vh;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
             user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .container {
-            text-align: center;
-            width: 100%;
-            transition: all 0.3s ease;
+        /* --- UI ELEMENTS --- */
+        
+        /* Прогресс бар */
+        .progress-container {
+            position: absolute;
+            top: 40px;
+            width: 80%;
+            max-width: 300px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            opacity: 0; /* Скрыт пока не нажмут первый раз */
+            transition: opacity 0.3s;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #ffaa00, #ffea00);
+            box-shadow: 0 0 10px #ffaa00;
+            transition: width 0.1s linear;
         }
 
-        /* Экран 1: Ёлка */
-        #scene-tree {
+        /* Тексты */
+        .title {
+            position: absolute;
+            top: 60px;
+            font-size: 16px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.6);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Сцена 1: Кликер (Звезда) */
+        #stage-clicker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .main-star-wrapper {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             cursor: pointer;
+        }
+
+        .main-star {
+            font-size: 120px;
+            filter: drop-shadow(0 0 40px rgba(224, 165, 9, 0.4));
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2;
+        }
+
+        .click-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            transform: scale(0.8);
+            opacity: 0;
+        }
+
+        .tap-hint {
+            margin-top: 30px;
+            font-size: 14px;
+            opacity: 0.5;
+            animation: pulseText 2s infinite;
+        }
+
+        /* Сцена 2: Рулетка (Подарки) */
+        #stage-roulette {
+            display: none; /* Flex при активации */
+            width: 100%;
+            height: 100%;
+            justify-content: center;
+            align-items: center;
+            perspective: 800px; /* Для 3D вращения */
+            z-index: 10;
+        }
+
+        .gift-container {
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 70px;
+            /* Начальное состояние: все в центре, невидимые */
+            opacity: 0; 
+            transform: scale(0);
+            cursor: pointer;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+        }
+        
+        /* Свечение для активных коробок */
+        .gift-container.active {
             animation: float 3s ease-in-out infinite;
         }
-        .tree-emoji {
-            font-size: 150px;
-            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.5));
-        }
-        .tap-hint {
-            margin-top: 20px;
-            opacity: 0.7;
-            font-size: 14px;
-        }
-
-        /* Экран 2: Коробки */
-        #scene-gifts {
-            display: none; /* Скрыто по умолчанию */
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
-        .gift-box {
-            font-size: 60px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .gift-box:active {
-            transform: scale(0.9);
+        .gift-container.active::after {
+            content: '';
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 15px;
+            background: radial-gradient(ellipse, rgba(255,255,255,0.2), transparent 70%);
+            z-index: -1;
         }
 
-        /* Экран 3: Награда */
-        #scene-reward {
-            display: none; /* Скрыто по умолчанию */
+        /* Сцена 3: Результат */
+        #stage-result {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(15px);
+            z-index: 100;
+            display: none;
             flex-direction: column;
             align-items: center;
-        }
-        .star-icon {
-            font-size: 100px;
-            margin-bottom: 20px;
-            animation: spin 10s linear infinite;
-        }
-        .reward-title {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        .reward-subtitle {
-            font-size: 16px;
-            opacity: 0.8;
-            max-width: 80%;
-            line-height: 1.4;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.5s;
         }
 
-        /* Анимации */
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
-        }
-        
-        @keyframes spin {
-            from {transform: rotate(0deg);}
-            to {transform: rotate(360deg);}
-        }
-
-        .hidden {
-            display: none !important;
-        }
-        
-        .visible-flex {
-            display: flex !important;
+        .result-card {
+            background: rgba(30, 30, 40, 0.6);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 30px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(255, 170, 0, 0.15);
+            transform: scale(0.8);
+            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            position: relative;
+            overflow: hidden;
         }
 
-        /* Конфетти (упрощенно CSS частицами) */
-        .confetti {
+        /* Лучи света на фоне карточки */
+        .sunburst {
             position: absolute;
-            width: 10px;
-            height: 10px;
-            background-color: #f00;
-            animation: fall linear forwards;
+            top: 50%;
+            left: 50%;
+            width: 500px;
+            height: 500px;
+            background: repeating-conic-gradient(
+                from 0deg,
+                rgba(255, 215, 0, 0.05) 0deg 20deg,
+                transparent 20deg 40deg
+            );
+            transform: translate(-50%, -50%);
+            animation: rotateSun 20s linear infinite;
+            z-index: -1;
         }
-        @keyframes fall {
-            to { transform: translateY(100vh) rotate(720deg); }
+
+        .btn-main {
+            background: linear-gradient(90deg, #ff9a00, #e0a509);
+            border: none;
+            padding: 16px 40px;
+            border-radius: 16px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 18px;
+            margin-top: 20px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(255, 154, 0, 0.4);
+        }
+
+        /* --- ANIMATIONS --- */
+
+        /* Анимация нажатия */
+        .clicked {
+            transform: scale(0.9) !important;
+        }
+
+        /* Анимация кольца при клике */
+        @keyframes expandRing {
+            0% { transform: scale(0.8); opacity: 1; border-width: 4px;}
+            100% { transform: scale(1.5); opacity: 0; border-width: 0px;}
+        }
+
+        /* Анимация появления коробок (Вращение + движение) */
+        @keyframes spinOutLeft {
+            0% { opacity: 0; transform: translateX(0) rotateY(0deg) scale(0); }
+            100% { opacity: 1; transform: translateX(-100px) rotateY(-360deg) scale(1); }
+        }
+        @keyframes spinOutRight {
+            0% { opacity: 0; transform: translateX(0) rotateY(0deg) scale(0); }
+            100% { opacity: 1; transform: translateX(100px) rotateY(360deg) scale(1); }
+        }
+        @keyframes spinOutCenter {
+            0% { opacity: 0; transform: translateY(0) rotateX(0deg) scale(0); }
+            100% { opacity: 1; transform: translateY(0) rotateX(360deg) scale(1); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) translateX(var(--offset)); }
+            50% { transform: translateY(-15px) translateX(var(--offset)); }
+        }
+
+        @keyframes rotateSun {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Canvas для частиц */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 50;
         }
     </style>
 </head>
 <body>
 
-    <!-- Сцена 1: Ёлка -->
-    <div id="scene-tree" class="container" onclick="showGifts()">
-        <div class="tree-emoji">🎄</div>
-        <div class="tap-hint">Нажми, чтобы открыть</div>
+    <div class="progress-container">
+        <div class="progress-bar" id="progress"></div>
+    </div>
+    <div class="title" id="status-text">Заряди энергию</div>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- СЦЕНА 1: КЛИКЕР -->
+    <div id="stage-clicker">
+        <div class="main-star-wrapper" id="click-btn">
+            <div class="click-ring"></div>
+            <div class="main-star">⭐️</div>
+        </div>
+        <div class="tap-hint">Тапай, чтобы получить подарки</div>
     </div>
 
-    <!-- Сцена 2: Подарки -->
-    <div id="scene-gifts" class="container hidden">
-        <div class="gift-box" onclick="openGift(this)">🎁</div>
-        <div class="gift-box" onclick="openGift(this)">🎁</div>
-        <div class="gift-box" onclick="openGift(this)">🎁</div>
+    <!-- СЦЕНА 2: РУЛЕТКА -->
+    <div id="stage-roulette">
+        <!-- Подарки будут здесь -->
+        <div class="gift-container" id="gift-1">🎁</div>
+        <div class="gift-container" id="gift-2">🎁</div>
+        <div class="gift-container" id="gift-3">🎁</div>
     </div>
 
-    <!-- Сцена 3: Результат -->
-    <div id="scene-reward" class="container hidden">
-        <div class="star-icon">⭐️</div>
-        <div class="reward-title">5000 Telegram Stars</div>
-        <div class="reward-subtitle">Поздравляем! Вы получили Telegram Stars.<br><small>(Это демо-версия)</small></div>
+    <!-- СЦЕНА 3: РЕЗУЛЬТАТ -->
+    <div id="stage-result">
+        <div class="result-card">
+            <div class="sunburst"></div>
+            <div style="font-size: 80px; margin-bottom: 10px;">⭐️</div>
+            <h2 style="margin: 0; font-size: 32px; color: #ffca28;">5000</h2>
+            <p style="margin: 5px 0 20px; color: #ddd;">Telegram Stars</p>
+            <button class="btn-main" onclick="tg.close()">ЗАБРАТЬ</button>
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Раскрыть на весь экран
+        tg.expand();
+        tg.enableClosingConfirmation();
 
-        const treeScene = document.getElementById('scene-tree');
-        const giftsScene = document.getElementById('scene-gifts');
-        const rewardScene = document.getElementById('scene-reward');
+        // --- КОНФИГУРАЦИЯ ---
+        const CLICKS_TO_WIN = 10; // Сколько раз нужно нажать
+        let clicks = 0;
+        let isRouletteStarted = false;
 
-        // Переход от елки к подаркам
-        function showGifts() {
-            treeScene.classList.add('hidden');
-            giftsScene.classList.remove('hidden');
-            giftsScene.classList.add('visible-flex');
-            
-            // Вибрация (если поддерживается устройством в TG)
+        // Элементы
+        const progressBar = document.getElementById('progress');
+        const progressCont = document.querySelector('.progress-container');
+        const clickerStage = document.getElementById('stage-clicker');
+        const rouletteStage = document.getElementById('stage-roulette');
+        const resultStage = document.getElementById('stage-result');
+        const resultCard = document.querySelector('.result-card');
+        const clickBtn = document.getElementById('click-btn');
+        const starEl = document.querySelector('.main-star');
+        const statusText = document.getElementById('status-text');
+
+        // --- ЛОГИКА КЛИКЕРА ---
+        clickBtn.addEventListener('click', (e) => {
+            if (isRouletteStarted) return;
+
+            // Визуальные эффекты клика
             tg.HapticFeedback.impactOccurred('light');
+            
+            // Анимация уменьшения звезды
+            starEl.classList.add('clicked');
+            setTimeout(() => starEl.classList.remove('clicked'), 100);
+
+            // Анимация кольца
+            const ring = document.createElement('div');
+            ring.classList.add('click-ring');
+            ring.style.animation = 'expandRing 0.4s ease-out forwards';
+            clickBtn.appendChild(ring);
+            setTimeout(() => ring.remove(), 400);
+
+            // Частицы
+            createParticles(e.clientX, e.clientY, 5);
+
+            // Логика прогресса
+            clicks++;
+            progressCont.style.opacity = '1';
+            const progressPercent = (clicks / CLICKS_TO_WIN) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+
+            if (clicks >= CLICKS_TO_WIN) {
+                startRoulette();
+            }
+        });
+
+        // --- ЛОГИКА РУЛЕТКИ ---
+        function startRoulette() {
+            isRouletteStarted = true;
+            statusText.innerText = "Выбирай подарок";
+            statusText.style.opacity = '0'; // Скроем на время анимации
+
+            // Прячем кликер
+            clickerStage.style.transition = 'opacity 0.3s, transform 0.3s';
+            clickerStage.style.opacity = '0';
+            clickerStage.style.transform = 'scale(1.5)';
+            
+            setTimeout(() => {
+                clickerStage.style.display = 'none';
+                rouletteStage.style.display = 'flex';
+                
+                // Запускаем анимацию подарков
+                animateGiftsEntry();
+            }, 300);
         }
 
-        // Открытие подарка
-        function openGift(element) {
-            // Эффект нажатия
+        function animateGiftsEntry() {
+            const g1 = document.getElementById('gift-1');
+            const g2 = document.getElementById('gift-2');
+            const g3 = document.getElementById('gift-3');
+
+            // Назначаем анимации вылета (Left, Center, Right)
+            // 0.8s - длительность вращения
+            g1.style.animation = 'spinOutLeft 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards';
+            g2.style.animation = 'spinOutCenter 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards';
+            g3.style.animation = 'spinOutRight 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards';
+
+            // Когда они "приземлились"
+            setTimeout(() => {
+                tg.HapticFeedback.notificationOccurred('success'); // Вибрация "успех" при приземлении
+                
+                // Делаем их "плавающими" (breathing) и кликабельными
+                [g1, g2, g3].forEach((el, index) => {
+                    el.style.animation = 'none'; // сброс вращения
+                    // Хак для сохранения позиции после анимации (для простоты JS используем оффсеты)
+                    // Но лучше просто задать классы
+                    el.style.opacity = '1';
+                    el.style.transform = 'scale(1)';
+                    
+                    // Расстановка позиций вручную, чтобы float работал корректно
+                    if(index === 0) el.style.transform = 'translateX(-100px)';
+                    if(index === 2) el.style.transform = 'translateX(100px)';
+
+                    // Переменная для CSS анимации float
+                    el.style.setProperty('--offset', index === 0 ? '-100px' : (index === 2 ? '100px' : '0px'));
+                    
+                    // Добавляем класс анимации покачивания
+                    setTimeout(() => el.classList.add('active'), 50 * index);
+
+                    // Клик на открытие
+                    el.onclick = () => openFinalGift(el);
+                });
+
+                statusText.style.opacity = '1';
+            }, 800);
+        }
+
+        // --- ФИНАЛ ---
+        function openFinalGift(element) {
             tg.HapticFeedback.impactOccurred('heavy');
             
-            // Скрываем подарки
-            giftsScene.classList.remove('visible-flex');
-            giftsScene.classList.add('hidden');
+            // Взрыв частиц
+            const rect = element.getBoundingClientRect();
+            createParticles(rect.left + 45, rect.top + 45, 30); // Много частиц
 
-            // Показываем награду
-            rewardScene.classList.remove('hidden');
-            rewardScene.classList.add('visible-flex');
+            // Прячем подарки
+            rouletteStage.style.transition = 'opacity 0.2s';
+            rouletteStage.style.opacity = '0';
+            statusText.style.opacity = '0';
+            progressCont.style.opacity = '0';
 
-            // Запускаем конфетти
-            createConfetti();
+            setTimeout(() => {
+                rouletteStage.style.display = 'none';
+                
+                // Показ результата
+                resultStage.style.display = 'flex';
+                // Небольшая задержка для плавности
+                setTimeout(() => {
+                    resultStage.style.opacity = '1';
+                    resultCard.style.transform = 'scale(1)';
+                    createConfettiLoop(); // Запуск бесконечного салюта
+                }, 50);
+            }, 200);
         }
 
-        // Простая функция для создания конфетти
-        function createConfetti() {
-            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff'];
-            for (let i = 0; i < 50; i++) {
-                const confetti = document.createElement('div');
-                confetti.classList.add('confetti');
-                confetti.style.left = Math.random() * 100 + 'vw';
-                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
-                confetti.style.top = -10 + 'px';
-                document.body.appendChild(confetti);
-                
-                // Удаляем конфетти после анимации
-                setTimeout(() => confetti.remove(), 4000);
+        // --- СИСТЕМА ЧАСТИЦ (CANVAS) ---
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        function createParticles(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1,
+                    color: `hsl(${Math.random() * 60 + 30}, 100%, 50%)`, // Gold/Yellow shades
+                    size: Math.random() * 5 + 2
+                });
             }
         }
+
+        function createConfettiLoop() {
+            setInterval(() => {
+                createParticles(window.innerWidth / 2, window.innerHeight / 2 + 100, 5);
+            }, 100);
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < particles.length; i++) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                p.size *= 0.95;
+
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
     </script>
 </body>
 </html>
