@@ -3,498 +3,570 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Premium Stars Giveaway</title>
+    <title>Earn App UI</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --primary: #e0a509;
-            --accent: #ff0055;
-            --bg-grad-start: #1c1038;
-            --bg-grad-end: #0a0514;
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --bg-color: #000000;
+            --card-bg: #151515; /* Очень темный серый */
+            --primary-blue: #007aff;
+            --text-white: #ffffff;
+            --text-gray: #8e8e93;
+            --separator: #2c2c2e;
+            --bottom-nav-height: 70px;
         }
 
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, var(--bg-grad-start), var(--bg-grad-end));
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            height: 100vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            background-color: var(--bg-color);
+            color: var(--text-white);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            padding-bottom: var(--bottom-nav-height); /* Место под меню */
             user-select: none;
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- UI ELEMENTS --- */
-        
-        /* Прогресс бар */
-        .progress-container {
-            position: absolute;
-            top: 40px;
-            width: 80%;
-            max-width: 300px;
-            height: 6px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            opacity: 0; /* Скрыт пока не нажмут первый раз */
-            transition: opacity 0.3s;
-        }
-        
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #ffaa00, #ffea00);
-            box-shadow: 0 0 10px #ffaa00;
-            transition: width 0.1s linear;
-        }
-
-        /* Тексты */
-        .title {
-            position: absolute;
-            top: 60px;
-            font-size: 16px;
-            font-weight: 500;
-            color: rgba(255,255,255,0.6);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        /* Сцена 1: Кликер (Звезда) */
-        #stage-clicker {
+        /* --- ОБЩИЕ ЭЛЕМЕНТЫ --- */
+        .header-top {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-
-        .main-star-wrapper {
-            position: relative;
-            width: 200px;
-            height: 200px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .main-star {
-            font-size: 120px;
-            filter: drop-shadow(0 0 40px rgba(224, 165, 9, 0.4));
-            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 2;
-        }
-
-        .click-ring {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 215, 0, 0.3);
-            transform: scale(0.8);
-            opacity: 0;
-        }
-
-        .tap-hint {
-            margin-top: 30px;
-            font-size: 14px;
-            opacity: 0.5;
-            animation: pulseText 2s infinite;
-        }
-
-        /* Сцена 2: Рулетка (Подарки) */
-        #stage-roulette {
-            display: none; /* Flex при активации */
-            width: 100%;
-            height: 100%;
-            justify-content: center;
-            align-items: center;
-            perspective: 800px; /* Для 3D вращения */
-            z-index: 10;
-        }
-
-        .gift-container {
-            position: absolute;
-            width: 90px;
-            height: 90px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 70px;
-            /* Начальное состояние: все в центре, невидимые */
-            opacity: 0; 
-            transform: scale(0);
-            cursor: pointer;
-            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
-        }
-        
-        /* Свечение для активных коробок */
-        .gift-container.active {
-            animation: float 3s ease-in-out infinite;
-        }
-        .gift-container.active::after {
-            content: '';
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 15px;
-            background: radial-gradient(ellipse, rgba(255,255,255,0.2), transparent 70%);
-            z-index: -1;
-        }
-
-        /* Сцена 3: Результат */
-        #stage-result {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(15px);
-            z-index: 100;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-
-        .result-card {
-            background: rgba(30, 30, 40, 0.6);
-            border: 1px solid rgba(255, 215, 0, 0.2);
-            border-radius: 30px;
-            padding: 40px;
-            text-align: center;
-            box-shadow: 0 0 50px rgba(255, 170, 0, 0.15);
-            transform: scale(0.8);
-            transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Лучи света на фоне карточки */
-        .sunburst {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 500px;
-            height: 500px;
-            background: repeating-conic-gradient(
-                from 0deg,
-                rgba(255, 215, 0, 0.05) 0deg 20deg,
-                transparent 20deg 40deg
-            );
-            transform: translate(-50%, -50%);
-            animation: rotateSun 20s linear infinite;
-            z-index: -1;
-        }
-
-        .btn-main {
-            background: linear-gradient(90deg, #ff9a00, #e0a509);
-            border: none;
-            padding: 16px 40px;
-            border-radius: 16px;
-            color: #fff;
+            padding: 15px 16px;
+            font-size: 20px;
             font-weight: 700;
-            font-size: 18px;
-            margin-top: 20px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
             cursor: pointer;
-            box-shadow: 0 5px 20px rgba(255, 154, 0, 0.4);
         }
 
-        /* --- ANIMATIONS --- */
-
-        /* Анимация нажатия */
-        .clicked {
-            transform: scale(0.9) !important;
+        /* Табы (верхние) */
+        .top-tabs {
+            display: flex;
+            gap: 20px;
+            padding: 0 16px;
+            margin-bottom: 20px;
+        }
+        .top-tab {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-gray);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .top-tab.active {
+            color: var(--text-white);
         }
 
-        /* Анимация кольца при клике */
-        @keyframes expandRing {
-            0% { transform: scale(0.8); opacity: 1; border-width: 4px;}
-            100% { transform: scale(1.5); opacity: 0; border-width: 0px;}
+        /* Фильтры (чипсы) */
+        .filters {
+            display: flex;
+            gap: 10px;
+            padding: 0 16px;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            scrollbar-width: none;
+        }
+        .filters::-webkit-scrollbar { display: none; }
+        
+        .chip {
+            background: var(--card-bg);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            color: var(--text-gray);
+            border: 1px solid transparent;
+        }
+        .chip.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
-        /* Анимация появления коробок (Вращение + движение) */
-        @keyframes spinOutLeft {
-            0% { opacity: 0; transform: translateX(0) rotateY(0deg) scale(0); }
-            100% { opacity: 1; transform: translateX(-100px) rotateY(-360deg) scale(1); }
-        }
-        @keyframes spinOutRight {
-            0% { opacity: 0; transform: translateX(0) rotateY(0deg) scale(0); }
-            100% { opacity: 1; transform: translateX(100px) rotateY(360deg) scale(1); }
-        }
-        @keyframes spinOutCenter {
-            0% { opacity: 0; transform: translateY(0) rotateX(0deg) scale(0); }
-            100% { opacity: 1; transform: translateY(0) rotateX(360deg) scale(1); }
+        /* Карточка задания */
+        .task-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            margin: 0 16px 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        @keyframes float {
-            0%, 100% { transform: translateY(0px) translateX(var(--offset)); }
-            50% { transform: translateY(-15px) translateX(var(--offset)); }
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .task-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        .icon-tg { background: linear-gradient(135deg, #2AABEE, #229ED9); }
+        .icon-web { background: linear-gradient(135deg, #8E8E93, #636366); }
+
+        .price-tag {
+            background: rgba(0, 122, 255, 0.15);
+            color: #60a5fa;
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
         }
 
-        @keyframes rotateSun {
-            from { transform: translate(-50%, -50%) rotate(0deg); }
-            to { transform: translate(-50%, -50%) rotate(360deg); }
+        .task-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin: 5px 0;
         }
 
-        @keyframes pulseText {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
+        .task-desc {
+            font-size: 13px;
+            color: var(--text-gray);
+            line-height: 1.4;
         }
 
-        /* Canvas для частиц */
-        canvas {
-            position: absolute;
-            top: 0;
+        .task-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .time-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-gray);
+            font-size: 13px;
+        }
+
+        .btn-action {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* --- СТРАНИЦА: БОНУСЫ (СПОНСОРЫ) --- */
+        .info-banner {
+            background: rgba(0, 122, 255, 0.1);
+            border-left: 3px solid var(--primary-blue);
+            margin: 0 16px 20px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #ccc;
+        }
+
+        .sponsor-item {
+            background: #1c1c1e;
+            margin: 0 16px 12px;
+            padding: 12px 16px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .sponsor-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sponsor-icon {
+            width: 32px;
+            height: 32px;
+            background: #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .sponsor-info h4 { margin: 0; font-size: 15px; }
+        .sponsor-price { color: var(--primary-blue); font-size: 13px; font-weight: 700; margin-top: 2px; }
+
+        .btn-small {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        /* --- СТРАНИЦА: ПРОФИЛЬ --- */
+        .profile-card {
+            background: #151515;
+            margin: 20px 16px;
+            padding: 20px;
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+        }
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #333;
+            background-image: url('https://cdn-icons-png.flaticon.com/512/147/147142.png'); /* Placeholder */
+            background-size: cover;
+        }
+        .profile-info h2 { margin: 0; font-size: 18px; }
+        .rank-badge {
+            background: linear-gradient(90deg, #ff9a00, #ffc107);
+            color: black;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-right: 5px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        .stats-grid {
+            display: flex;
+            margin: 0 16px;
+            gap: 10px;
+        }
+        .stat-box {
+            flex: 1;
+            background: #151515;
+            padding: 20px;
+            border-radius: 20px;
+            text-align: center;
+        }
+        .stat-value { font-size: 24px; font-weight: 700; margin-bottom: 5px; }
+        .stat-label { font-size: 12px; color: var(--text-gray); }
+
+        .profile-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 16px;
+        }
+        .btn-glass {
+            flex: 1;
+            background: rgba(255,255,255,0.08);
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* --- НИЖНЕЕ МЕНЮ --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
             left: 0;
-            pointer-events: none;
-            z-index: 50;
+            width: 100%;
+            height: var(--bottom-nav-height);
+            background: rgba(20, 20, 20, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 0.5px solid rgba(255,255,255,0.1);
+            z-index: 100;
         }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-gray);
+            font-size: 10px;
+            cursor: pointer;
+            width: 60px;
+        }
+        .nav-item.active {
+            color: white;
+        }
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+        /* Helpers */
+        .hidden { display: none !important; }
+        .view-section { display: none; animation: fadeIn 0.2s; }
+        .view-section.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Реферальная секция */
+        .ref-stats {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .ref-stat-item h3 { margin: 0; font-size: 18px; }
+        .ref-stat-item span { font-size: 11px; color: var(--text-gray); }
+
     </style>
 </head>
 <body>
 
-    <div class="progress-container">
-        <div class="progress-bar" id="progress"></div>
-    </div>
-    <div class="title" id="status-text">Заряди энергию</div>
-
-    <canvas id="canvas"></canvas>
-
-    <!-- СЦЕНА 1: КЛИКЕР -->
-    <div id="stage-clicker">
-        <div class="main-star-wrapper" id="click-btn">
-            <div class="click-ring"></div>
-            <div class="main-star">⭐️</div>
+    <!-- ВЬЮХА 1: ЗАДАНИЯ (По умолчанию) -->
+    <div id="view-tasks" class="view-section active">
+        <div class="header-top">
+            <span onclick="tg.close()">✕ Закрыть</span>
+            <span>⋮</span>
         </div>
-        <div class="tap-hint">Тапай, чтобы получить подарки</div>
-    </div>
 
-    <!-- СЦЕНА 2: РУЛЕТКА -->
-    <div id="stage-roulette">
-        <!-- Подарки будут здесь -->
-        <div class="gift-container" id="gift-1">🎁</div>
-        <div class="gift-container" id="gift-2">🎁</div>
-        <div class="gift-container" id="gift-3">🎁</div>
-    </div>
+        <div class="top-tabs">
+            <div class="top-tab active">Задания</div>
+            <div class="top-tab" style="opacity: 0.5">Премиум</div>
+        </div>
 
-    <!-- СЦЕНА 3: РЕЗУЛЬТАТ -->
-    <div id="stage-result">
-        <div class="result-card">
-            <div class="sunburst"></div>
-            <div style="font-size: 80px; margin-bottom: 10px;">⭐️</div>
-            <h2 style="margin: 0; font-size: 32px; color: #ffca28;">5000</h2>
-            <p style="margin: 5px 0 20px; color: #ddd;">Telegram Stars</p>
-            <button class="btn-main" onclick="tg.close()">ЗАБРАТЬ</button>
+        <div class="filters">
+            <div class="chip active">Новые</div>
+            <div class="chip">Дорогие</div>
+            <div class="chip">Быстрые</div>
+            <div class="chip">Простые</div>
+        </div>
+
+        <!-- Карточка 1 -->
+        <div class="task-card">
+            <div class="task-header">
+                <div class="task-icon icon-web">🌐</div>
+                <div class="price-tag">+50₽</div>
+            </div>
+            <div class="task-title">Регистрация на сервисе</div>
+            <div class="task-desc">Все просто. Внимательно следуйте инструкциям на каждом шаге.</div>
+            <div class="task-footer">
+                <div class="time-badge">🕒 5 min</div>
+                <button class="btn-action">Продолжить</button>
+            </div>
+        </div>
+
+        <!-- Карточка 2 -->
+        <div class="task-card">
+            <div class="task-header">
+                <div class="task-icon icon-tg">✈️</div>
+                <div class="price-tag">+15₽</div>
+            </div>
+            <div class="task-title">Подписаться на канал</div>
+            <div class="task-desc">Не забудьте сделать скриншот подписки для проверки.</div>
+            <div class="task-footer">
+                <div class="time-badge">🕒 1 min</div>
+                <button class="btn-action">Продолжить</button>
+            </div>
         </div>
     </div>
+
+
+    <!-- ВЬЮХА 2: БОНУСЫ (Ежедневные / Рефералы) -->
+    <div id="view-bonuses" class="view-section">
+        <div class="header-top">
+            <span onclick="tg.close()">✕ Закрыть</span>
+            <span>⋮</span>
+        </div>
+
+        <!-- Внутренние табы бонусов -->
+        <div class="top-tabs" id="bonus-tabs">
+            <div class="top-tab active" onclick="switchBonusTab('daily')">Ежедневные</div>
+            <div class="top-tab" onclick="switchBonusTab('refs')">Рефералы</div>
+        </div>
+
+        <!-- Контент: Ежедневные -->
+        <div id="bonus-content-daily">
+            <div class="info-banner">
+                Выполнение этих заданий открывает доступ к премиум заданиям с повышенной оплатой.
+            </div>
+
+            <div class="sponsor-item">
+                <div class="sponsor-left">
+                    <div class="sponsor-icon">✈️</div>
+                    <div class="sponsor-info">
+                        <h4>Спонсор #3</h4>
+                        <div class="sponsor-price">+1.5₽</div>
+                    </div>
+                </div>
+                <button class="btn-small">Начать</button>
+            </div>
+
+            <div class="sponsor-item">
+                <div class="sponsor-left">
+                    <div class="sponsor-icon">✈️</div>
+                    <div class="sponsor-info">
+                        <h4>Спонсор #1</h4>
+                        <div class="sponsor-price">+1.5₽</div>
+                    </div>
+                </div>
+                <button class="btn-small">Начать</button>
+            </div>
+
+            <div class="sponsor-item">
+                <div class="sponsor-left">
+                    <div class="sponsor-icon">✈️</div>
+                    <div class="sponsor-info">
+                        <h4>Спонсор #2</h4>
+                        <div class="sponsor-price">+1.5₽</div>
+                    </div>
+                </div>
+                <button class="btn-small">Начать</button>
+            </div>
+        </div>
+
+        <!-- Контент: Рефералы (Скрыт) -->
+        <div id="bonus-content-refs" class="hidden">
+            <div class="info-banner">
+                С реферала 1 Lvl ты получаешь 20% от его заработка. За одного приглашенного человека вы получаете 5 рублей.
+            </div>
+            
+            <div class="profile-card" style="justify-content: space-between; padding: 15px;">
+                <div>
+                    <div style="font-size: 13px; color: #8e8e93">Заработано</div>
+                    <div style="font-size: 20px; font-weight: 700;">0₽</div>
+                </div>
+                <button class="btn-small">Собрать</button>
+            </div>
+
+            <div class="ref-stats">
+                <div class="ref-stat-item">
+                    <h3>0</h3>
+                    <span>Рефералы 1 Lvl</span>
+                </div>
+                <div class="ref-stat-item">
+                    <h3>0</h3>
+                    <span>Рефералы 2 Lvl</span>
+                </div>
+                <div class="ref-stat-item">
+                    <h3>0₽</h3>
+                    <span>Заработано</span>
+                </div>
+            </div>
+            
+            <div style="padding: 16px;">
+                <button class="btn-action" style="width: 100%; padding: 14px;">Пригласить друзей</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ВЬЮХА 3: ПРОФИЛЬ -->
+    <div id="view-profile" class="view-section">
+        <div class="header-top">
+            <span onclick="tg.close()">✕ Закрыть</span>
+            <span>⋮</span>
+        </div>
+
+        <div class="profile-buttons" style="justify-content: flex-end; margin-top:0;">
+            <button class="btn-glass">❓ Поддержка</button>
+            <button class="btn-glass">0₽</button>
+            <button class="btn-glass">Вывод</button>
+        </div>
+
+        <div class="profile-card">
+            <div class="avatar"></div>
+            <div class="profile-info">
+                <h2>@username</h2>
+                <span class="rank-badge">★ Новичок</span>
+                <span style="font-size: 12px; color: #555;">Умелый 🛡</span>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Выполнено заданий</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value">0₽</div>
+                <div class="stat-label">Заработано</div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- НИЖНЕЕ МЕНЮ -->
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchView('tasks', this)">
+            <div class="nav-icon">₽</div>
+            <div>Задания</div>
+        </div>
+        <div class="nav-item" onclick="switchView('bonuses', this)">
+            <div class="nav-icon">★</div>
+            <div>Бонусы</div>
+        </div>
+        <div class="nav-item" onclick="switchView('profile', this)">
+            <div class="nav-icon">👤</div>
+            <div>Профиль</div>
+        </div>
+    </nav>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        tg.enableClosingConfirmation();
 
-        // --- КОНФИГУРАЦИЯ ---
-        const CLICKS_TO_WIN = 10; // Сколько раз нужно нажать
-        let clicks = 0;
-        let isRouletteStarted = false;
+        // Попробуем получить имя пользователя, если оно доступно
+        if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const user = tg.initDataUnsafe.user;
+            document.querySelector('.profile-info h2').innerText = user.username ? '@' + user.username : user.first_name;
+        }
 
-        // Элементы
-        const progressBar = document.getElementById('progress');
-        const progressCont = document.querySelector('.progress-container');
-        const clickerStage = document.getElementById('stage-clicker');
-        const rouletteStage = document.getElementById('stage-roulette');
-        const resultStage = document.getElementById('stage-result');
-        const resultCard = document.querySelector('.result-card');
-        const clickBtn = document.getElementById('click-btn');
-        const starEl = document.querySelector('.main-star');
-        const statusText = document.getElementById('status-text');
+        // Переключение основных экранов (Нижнее меню)
+        function switchView(viewId, element) {
+            // 1. Убираем класс active у всех кнопок меню
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            // 2. Добавляем active нажатой кнопке
+            element.classList.add('active');
 
-        // --- ЛОГИКА КЛИКЕРА ---
-        clickBtn.addEventListener('click', (e) => {
-            if (isRouletteStarted) return;
-
-            // Визуальные эффекты клика
+            // 3. Скрываем все секции
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            // 4. Показываем нужную
+            document.getElementById('view-' + viewId).classList.add('active');
+            
             tg.HapticFeedback.impactOccurred('light');
-            
-            // Анимация уменьшения звезды
-            starEl.classList.add('clicked');
-            setTimeout(() => starEl.classList.remove('clicked'), 100);
+        }
 
-            // Анимация кольца
-            const ring = document.createElement('div');
-            ring.classList.add('click-ring');
-            ring.style.animation = 'expandRing 0.4s ease-out forwards';
-            clickBtn.appendChild(ring);
-            setTimeout(() => ring.remove(), 400);
+        // Переключение табов внутри Бонусов (Ежедневные / Рефералы)
+        function switchBonusTab(tabName) {
+            const tabs = document.querySelectorAll('#bonus-tabs .top-tab');
+            const dailyContent = document.getElementById('bonus-content-daily');
+            const refsContent = document.getElementById('bonus-content-refs');
 
-            // Частицы
-            createParticles(e.clientX, e.clientY, 5);
-
-            // Логика прогресса
-            clicks++;
-            progressCont.style.opacity = '1';
-            const progressPercent = (clicks / CLICKS_TO_WIN) * 100;
-            progressBar.style.width = `${progressPercent}%`;
-
-            if (clicks >= CLICKS_TO_WIN) {
-                startRoulette();
+            if (tabName === 'daily') {
+                tabs[0].classList.add('active');
+                tabs[1].classList.remove('active');
+                dailyContent.classList.remove('hidden');
+                refsContent.classList.add('hidden');
+            } else {
+                tabs[0].classList.remove('active');
+                tabs[1].classList.add('active');
+                dailyContent.classList.add('hidden');
+                refsContent.classList.remove('hidden');
             }
-        });
-
-        // --- ЛОГИКА РУЛЕТКИ ---
-        function startRoulette() {
-            isRouletteStarted = true;
-            statusText.innerText = "Выбирай подарок";
-            statusText.style.opacity = '0'; // Скроем на время анимации
-
-            // Прячем кликер
-            clickerStage.style.transition = 'opacity 0.3s, transform 0.3s';
-            clickerStage.style.opacity = '0';
-            clickerStage.style.transform = 'scale(1.5)';
-            
-            setTimeout(() => {
-                clickerStage.style.display = 'none';
-                rouletteStage.style.display = 'flex';
-                
-                // Запускаем анимацию подарков
-                animateGiftsEntry();
-            }, 300);
+            tg.HapticFeedback.selectionChanged();
         }
-
-        function animateGiftsEntry() {
-            const g1 = document.getElementById('gift-1');
-            const g2 = document.getElementById('gift-2');
-            const g3 = document.getElementById('gift-3');
-
-            // Назначаем анимации вылета (Left, Center, Right)
-            // 0.8s - длительность вращения
-            g1.style.animation = 'spinOutLeft 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards';
-            g2.style.animation = 'spinOutCenter 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards';
-            g3.style.animation = 'spinOutRight 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards';
-
-            // Когда они "приземлились"
-            setTimeout(() => {
-                tg.HapticFeedback.notificationOccurred('success'); // Вибрация "успех" при приземлении
-                
-                // Делаем их "плавающими" (breathing) и кликабельными
-                [g1, g2, g3].forEach((el, index) => {
-                    el.style.animation = 'none'; // сброс вращения
-                    // Хак для сохранения позиции после анимации (для простоты JS используем оффсеты)
-                    // Но лучше просто задать классы
-                    el.style.opacity = '1';
-                    el.style.transform = 'scale(1)';
-                    
-                    // Расстановка позиций вручную, чтобы float работал корректно
-                    if(index === 0) el.style.transform = 'translateX(-100px)';
-                    if(index === 2) el.style.transform = 'translateX(100px)';
-
-                    // Переменная для CSS анимации float
-                    el.style.setProperty('--offset', index === 0 ? '-100px' : (index === 2 ? '100px' : '0px'));
-                    
-                    // Добавляем класс анимации покачивания
-                    setTimeout(() => el.classList.add('active'), 50 * index);
-
-                    // Клик на открытие
-                    el.onclick = () => openFinalGift(el);
-                });
-
-                statusText.style.opacity = '1';
-            }, 800);
-        }
-
-        // --- ФИНАЛ ---
-        function openFinalGift(element) {
-            tg.HapticFeedback.impactOccurred('heavy');
-            
-            // Взрыв частиц
-            const rect = element.getBoundingClientRect();
-            createParticles(rect.left + 45, rect.top + 45, 30); // Много частиц
-
-            // Прячем подарки
-            rouletteStage.style.transition = 'opacity 0.2s';
-            rouletteStage.style.opacity = '0';
-            statusText.style.opacity = '0';
-            progressCont.style.opacity = '0';
-
-            setTimeout(() => {
-                rouletteStage.style.display = 'none';
-                
-                // Показ результата
-                resultStage.style.display = 'flex';
-                // Небольшая задержка для плавности
-                setTimeout(() => {
-                    resultStage.style.opacity = '1';
-                    resultCard.style.transform = 'scale(1)';
-                    createConfettiLoop(); // Запуск бесконечного салюта
-                }, 50);
-            }, 200);
-        }
-
-        // --- СИСТЕМА ЧАСТИЦ (CANVAS) ---
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
-        function createParticles(x, y, count) {
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: x,
-                    y: y,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    life: 1,
-                    color: `hsl(${Math.random() * 60 + 30}, 100%, 50%)`, // Gold/Yellow shades
-                    size: Math.random() * 5 + 2
-                });
-            }
-        }
-
-        function createConfettiLoop() {
-            setInterval(() => {
-                createParticles(window.innerWidth / 2, window.innerHeight / 2 + 100, 5);
-            }, 100);
-        }
-
-        function animateParticles() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i = 0; i < particles.length; i++) {
-                let p = particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.02;
-                p.size *= 0.95;
-
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.life;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-
-                if (p.life <= 0) {
-                    particles.splice(i, 1);
-                    i--;
-                }
-            }
-            requestAnimationFrame(animateParticles);
-        }
-        animateParticles();
-
     </script>
 </body>
 </html>
